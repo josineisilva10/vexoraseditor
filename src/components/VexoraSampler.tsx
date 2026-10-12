@@ -78,7 +78,7 @@ export function VexoraSampler() {
     a.onended=()=>setActive(old=>old.filter(k=>k!==p.key));
     void a.play().then(()=>{setActive(old=>old.includes(p.key)?old:[...old,p.key]);setNotice("Reproduzindo: "+p.name);}).catch(()=>setNotice("Clique novamente para iniciar o áudio."));
   };
-  useEffect(()=>{const fn=(e:KeyboardEvent)=>{if(e.repeat||e.ctrlKey||e.altKey||e.metaKey)return;const t=e.target as HTMLElement|null;if(t&&["INPUT","TEXTAREA"].includes(t.tagName))return;const k=e.code;const p=pads.find(x=>x.key===k);if(p){e.preventDefault();play(p);}};window.addEventListener("keydown",fn);return()=>window.removeEventListener("keydown",fn);},[pads,master]);
+  useEffect(()=>{const fn=(e:KeyboardEvent)=>{if(e.repeat||e.ctrlKey||e.altKey||e.metaKey)return;const t=e.target as HTMLElement|null;if(t&&(["INPUT","TEXTAREA","SELECT"].includes(t.tagName)||t.isContentEditable))return;const k=e.code;const p=pads.find(x=>x.key===k);if(p){e.preventDefault();play(p);}};window.addEventListener("keydown",fn);return()=>window.removeEventListener("keydown",fn);},[pads,master,muted,maxVoices]);
   const importAudio=(f?:File)=>{if(!f)return;if(!f.type.startsWith("audio/")&&!/\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(f.name)){setNotice("Formato de áudio não reconhecido.");return;}patch(selected,{name:f.name.replace(/\.[^.]+$/,""),url:URL.createObjectURL(f)});setNotice("Áudio carregado no pad "+selected);};
   const pausePad=(key:string)=>{const a=audioRef.current[key];if(a&&!a.paused){a.pause();setActive(old=>old.filter(k=>k!==key));setNotice("Áudio pausado");}};
   const resumePad=(p:Pad)=>{const a=audioRef.current[p.key];if(a&&a.paused){a.volume=muted?0:master/100*p.volume/100;void a.play().then(()=>setActive(old=>old.includes(p.key)?old:[...old,p.key]));}else play(p);};
