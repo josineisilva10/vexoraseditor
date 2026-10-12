@@ -17,7 +17,8 @@ function writeLog(message) {
 
 function getServerEntry() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "app.asar.unpacked", ".output", "server", "index.mjs");
+    // With ASAR disabled, electron-builder places app files directly in resources/app.
+    return path.join(process.resourcesPath, "app", ".output", "server", "index.mjs");
   }
   return path.join(__dirname, "..", ".output", "server", "index.mjs");
 }
