@@ -1,0 +1,58 @@
+name: Build VEXORA SAMPLER Windows installer
+
+on:
+  push:
+    branches: [windows-installer-prep]
+  workflow_dispatch:
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install application dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build server for local Windows runtime
+        run: bun run build
+        env:
+          NITRO_PRESET: node-server
+
+      - name: Prepare desktop package
+        shell: pwsh
+        run: |
+          $appDir = Join-Path $env:GITHUB_WORKSPACE "desktop/build-app"
+          New-Item -ItemType Directory -Force -Path $appDir | Out-Null
+          Copy-Item "desktop/main.cjs" (Join-Path $appDir "main.cjs") -Force
+          Copy-Item "desktop/package.json" (Join-Path $appDir "package.json") -Force
+          Copy-Item ".output" (Join-Path $appDir ".output") -Recurse -Force
+          if (!(Test-Path (Join-Path $appDir ".output/server/index.mjs"))) {
+            throw "The Node server entry .output/server/index.mjs was not generated."
+          }
+          if (!(Test-Path (Join-Path $appDir ".output/public"))) {
+            throw "The public assets folder .output/public was not generated."
+          }
+
+      - name: Install desktop packaging dependencies
+        working-directory: desktop/build-app
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows installer
+        working-directory: desktop/build-app
+        run: npm run dist:win
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: vexora-sampler-windows-installer
+          path: desktop/build-app/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
