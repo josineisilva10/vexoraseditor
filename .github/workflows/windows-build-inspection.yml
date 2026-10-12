@@ -30,8 +30,6 @@ jobs:
         with:
           name: vexora-windows-build-inspection
           path: |
-            dist/**
             .output/**
-            .nitro/**
-            .vinxi/**
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
