@@ -1,0 +1,35 @@
+name: Inspect VEXORA Windows build
+on:
+  workflow_dispatch:
+jobs:
+  inspect-windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: List generated build files
+        shell: pwsh
+        run: |
+          Write-Host "Repository root:"
+          Get-ChildItem -Force | Select-Object Name, Mode
+          foreach ($folder in @("dist", ".output", ".nitro", ".vinxi")) {
+            if (Test-Path $folder) {
+              Write-Host "Contents of $folder"
+              Get-ChildItem $folder -Recurse -File |
+                Select-Object -First 80 FullName, Length
+            }
+          }
+      - name: Upload build output for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: vexora-windows-build-inspection
+          path: |
+            dist/**
+            .output/**
+            .nitro/**
+            .vinxi/**
+          if-no-files-found: warn
