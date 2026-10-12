@@ -28,8 +28,8 @@ export async function uploadMedia(file: File, asset: MediaAsset, project: Projec
   if (!data.session) throw new Error('Entre na sua conta para importar arquivos para a nuvem.');
   await new Promise<void>((resolve, reject) => {
     const upload = new Upload(file, {
-      endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
-      headers: { authorization: `Bearer ${data.session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      endpoint: `${import.meta.env['VITE_SUPABASE_URL']}/storage/v1/upload/resumable`,
+      headers: { authorization: `Bearer ${data.session.access_token}`, apikey: import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] },
       chunkSize: 6 * 1024 * 1024,
       retryDelays: [1000, 3000, 5000],
       uploadDataDuringCreation: true,

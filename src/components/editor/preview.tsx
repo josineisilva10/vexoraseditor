@@ -7,6 +7,7 @@ export function Preview({ project, time, playing, onError, onMove }: { project: 
   const canvas = useRef<HTMLCanvasElement>(null);
   const resources = useRef<Resources>(new Map());
   const [loading, setLoading] = useState(false);
+  const latest = useRef({ project, time, playing }); latest.current = { project, time, playing };
   const signature = project.media.map(m => `${m.id}:${m.url}`).join('|');
   useEffect(() => {
     let active = true;
@@ -15,19 +16,20 @@ export function Preview({ project, time, playing, onError, onMove }: { project: 
     return () => { active = false; disposeResources(resources.current); };
   }, [signature]);
   useEffect(() => {
-    syncMedia(project, resources.current, time, playing);
-    if (canvas.current) drawComposition(canvas.current, project, resources.current, time);
-    const raf = requestAnimationFrame(() => { if (canvas.current) drawComposition(canvas.current, project, resources.current, time); });
+    let raf = 0;
+    const render = () => { const state = latest.current; syncMedia(state.project, resources.current, state.time, state.playing); if (canvas.current) drawComposition(canvas.current, state.project, resources.current, state.time); raf = requestAnimationFrame(render); };
+    raf = requestAnimationFrame(render);
     return () => cancelAnimationFrame(raf);
-  }, [project, time, playing, loading]);
+  }, []);
   const [w, h] = dimensions(project.aspect, 720);
   return <div className={`composition-wrap aspect-${project.aspect.replace(':', '-')}`}>
     <canvas ref={canvas} width={w} height={h} aria-label="Pré-visualização da composição" onPointerDown={e => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      e.currentTarget.setPointerCapture(e.pointerId);
+      const target = e.currentTarget;
+      const rect = target.getBoundingClientRect();
+      target.setPointerCapture(e.pointerId);
       const move = (event: PointerEvent) => onMove(Math.max(0, Math.min(100, (event.clientX - rect.left) / rect.width * 100)), Math.max(0, Math.min(100, (event.clientY - rect.top) / rect.height * 100)));
-      const stop = () => { e.currentTarget?.removeEventListener('pointermove', move); };
-      e.currentTarget.addEventListener('pointermove', move); e.currentTarget.addEventListener('pointerup', stop, { once: true });
+      const stop = () => { target.removeEventListener('pointermove', move); };
+      target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop, { once: true });
     }} />
     {loading && <span className="preview-loading"><LoaderCircle className="animate-spin" /></span>}
   </div>;

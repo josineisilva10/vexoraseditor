@@ -10,13 +10,14 @@ export function Timeline({ project, time, zoom, selected, onSelect, onSeek, onUp
   const width = total * pps;
   function drag(event: React.PointerEvent, clip: Clip, mode: 'move' | 'left' | 'right') {
     event.stopPropagation(); onSelect(clip.id);
-    const target = event.currentTarget; target.setPointerCapture(event.pointerId);
+    const target = event.currentTarget as HTMLElement; target.setPointerCapture(event.pointerId);
+    const rowHeight = target.closest('.timeline-track')?.getBoundingClientRect().height ?? 59;
     const x = event.clientX, y = event.clientY;
     const original = { ...clip };
     let patch: Partial<Clip> = {};
     const move = (e: PointerEvent) => {
       const delta = (e.clientX - x) / pps;
-      if (mode === 'move') patch = { start: Math.max(0, Math.round((original.start + delta) * 10) / 10), track: Math.max(0, Math.min(4, original.track + Math.round((e.clientY - y) / 59))) };
+      if (mode === 'move') patch = { start: Math.max(0, Math.round((original.start + delta) * 10) / 10), track: Math.max(0, Math.min(4, original.track + Math.round((e.clientY - y) / rowHeight))) };
       if (mode === 'right') {
         const media = project.media.find(m => m.id === clip.mediaId);
         const max = media && media.kind !== 'image' ? (media.duration - original.offset) / original.speed : 120;
@@ -24,10 +25,10 @@ export function Timeline({ project, time, zoom, selected, onSelect, onSeek, onUp
       }
       if (mode === 'left') { const d = Math.max(-Math.min(original.start, original.offset / original.speed), Math.min(delta, original.duration - .1)); patch = { start: original.start + d, duration: original.duration - d, offset: original.offset + d * original.speed }; }
       const element = target as HTMLElement;
-      if (mode === 'move') element.style.transform = `translate(${((patch.start ?? original.start) - original.start) * pps}px, ${((patch.track ?? original.track) - original.track) * 59}px)`;
-      else { element.parentElement?.style.setProperty('--drag-width', `${(patch.duration ?? original.duration) * pps}px`); }
+      if (mode === 'move') element.style.transform = `translate(${((patch.start ?? original.start) - original.start) * pps}px, ${((patch.track ?? original.track) - original.track) * rowHeight}px)`;
+      else { const parent = element.parentElement; if (parent) { parent.style.width = `${(patch.duration ?? original.duration) * pps}px`; parent.style.left = `${(patch.start ?? original.start) * pps}px`; } }
     };
-    const stop = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop); (target as HTMLElement).style.transform = ''; target.parentElement?.style.removeProperty('--drag-width'); if (Object.keys(patch).length) onUpdate(clip.id, patch); };
+    const stop = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', stop); target.style.transform = ''; if (Object.keys(patch).length) onUpdate(clip.id, patch); };
     target.addEventListener('pointermove', move); target.addEventListener('pointerup', stop, { once: true }); target.addEventListener('pointercancel', stop, { once: true });
   }
   return <div className="timeline-body">
