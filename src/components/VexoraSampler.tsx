@@ -1,3 +1,4 @@
+import "./vexora-sampler.css";
 import { useEffect, useRef, useState } from "react";
 import { AudioLines, Volume2, Play, Square, Plus, Settings2, ImagePlus, Save, Music2, Check } from "lucide-react";
 
