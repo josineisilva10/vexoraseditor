@@ -26,6 +26,16 @@ jobs:
         env:
           NITRO_PRESET: node-server
 
+      - name: Inspect generated server chunks
+        shell: pwsh
+        run: |
+          Write-Host "Generated server files:"
+          Get-ChildItem ".output/server" -Recurse -File | Select-Object -First 200 FullName
+          Write-Host "TanStack router-related chunks:"
+          Get-ChildItem ".output/server" -Recurse -File | Where-Object { $_.Name -like "*router*" -or $_.FullName -like "*_libs*" } | Select-Object FullName, Length
+          $expected = Get-ChildItem ".output/server" -Recurse -File | Where-Object { $_.Name -eq "react-router+[...].mjs" }
+          if (!$expected) { Write-Host "Expected router chunk name was not found literally; checking similarly named chunks:"; Get-ChildItem ".output/server" -Recurse -File | Where-Object { $_.Name -like "*react-router*" } | Select-Object Name, FullName }
+
       - name: Prepare desktop package
         shell: pwsh
         run: |
