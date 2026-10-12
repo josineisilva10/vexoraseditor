@@ -22,10 +22,7 @@
       "package.json",
       ".output/**/*"
     ],
-    "asar": true,
-    "asarUnpack": [
-      ".output/**"
-    ],
+    "asar": false,
     "win": {
       "target": [
         {
