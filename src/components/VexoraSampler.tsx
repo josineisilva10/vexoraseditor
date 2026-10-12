@@ -50,9 +50,12 @@ const colors = ["#8cff00", "#00d9ff", "#ff4d6d", "#ffb020", "#a78bfa", "#ffffff"
 const keys = KEY_DEFS.map(k=>k.key);
 const rows = [["Escape","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12"],["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],["KeyQ","KeyW","KeyE","KeyR","KeyT","KeyY","KeyU","KeyI","KeyO","KeyP"],["KeyA","KeyS","KeyD","KeyF","KeyG","KeyH","KeyJ","KeyK","KeyL"],["ShiftLeft","KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Space"],["ControlLeft","AltLeft","MetaLeft","Enter","Backspace","ArrowLeft","ArrowDown","ArrowUp","ArrowRight"],["Numpad7","Numpad8","Numpad9","Numpad4","Numpad5","Numpad6","Numpad1","Numpad2","Numpad3","Numpad0","NumpadEnter"]];
 export function VexoraSampler() {
-  const [pads,setPads] = useState<Pad[]>(keys.map((key,i)=>({key,name:"PAD LIVRE",color:colors[i%colors.length],loop:false,volume:85})));
-  const [master,setMaster] = useState(80);
+  const makePads = (): Pad[] => KEY_DEFS.map((item,i)=>({key:item.key,label:item.label,name:"PAD LIVRE",color:colors[i%colors.length],loop:false,volume:85,mode:"restart"}));
   const [bank,setBank] = useState("A");
+  const [bankPads,setBankPads] = useState<Record<string,Pad[]>>({A:makePads(),B:makePads(),C:makePads()});
+  const pads = bankPads[bank] || makePads();
+  const setPads = (updater: Pad[] | ((old:Pad[])=>Pad[])) => setBankPads(old=>({...old,[bank]:typeof updater==="function"?updater(old[bank]||makePads()):updater}));
+  const [master,setMaster] = useState(80);
   const [selected,setSelected] = useState("KeyA");
   const [active,setActive] = useState<string[]>([]);
   const [notice,setNotice] = useState("Pronto para receber seus áudios");
@@ -60,17 +63,31 @@ export function VexoraSampler() {
   const [dim,setDim] = useState(65);
   const [settings,setSettings] = useState(false);
   const [library,setLibrary] = useState(false);
+  const [audioReady,setAudioReady] = useState(false);
+  const [maxVoices,setMaxVoices] = useState(12);
+  const [muted,setMuted] = useState(false);
+  const [progress,setProgress] = useState<Record<string,{current:number;duration:number}>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<Record<string,HTMLAudioElement>>({});
   const chosen = pads.find(p=>p.key===selected);
   const patch = (key:string, data:Partial<Pad>)=>setPads(old=>old.map(p=>p.key===key?{...p,...data}:p));
-  useEffect(()=>{try{const raw=localStorage.getItem("vexora-sampler-settings");if(raw){const s=JSON.parse(raw);if(s.bank)setBank(s.bank);if(s.master!==undefined)setMaster(s.master);if(s.dim!==undefined)setDim(s.dim);if(s.maxVoices)setMaxVoices(s.maxVoices);if(s.bankPads)setBankPads(old=>({...old,...s.bankPads}));}}catch{setNotice("Não foi possível carregar todas as preferências salvas.");}
-    void readWallpaperAsset().then(blob=>{if(blob)setWallpaper(URL.createObjectURL(blob));}).catch(()=>{});
-    void readAudioAssets().then(assets=>{setBankPads(old=>{const next={...old};for(const b of Object.keys(next)){next[b]=next[b].map(p=>{const a=assets.find(x=>x.id===p.audioId);return a?{...p,url:URL.createObjectURL(a.blob),duration:a.duration,name:p.name||a.name}:p;});}return next;});setAudioReady(true);}).catch(()=>{setAudioReady(true);setNotice("Armazenamento de áudio indisponível neste navegador.");});
+  useEffect(()=>{
+    try {
+      const raw=localStorage.getItem("vexora-sampler-settings");
+      if(raw){const s=JSON.parse(raw);if(s.bank)setBank(s.bank);if(s.master!==undefined)setMaster(s.master);if(s.dim!==undefined)setDim(s.dim);if(s.maxVoices)setMaxVoices(s.maxVoices);if(s.bankPads)setBankPads(old=>({...old,...s.bankPads}));}
+    } catch { setNotice("Não foi possível carregar todas as preferências salvas."); }
+    void readWallpaperAsset().then(blob=>{if(blob&&blob.size)setWallpaper(URL.createObjectURL(blob));}).catch(()=>{});
+    void readAudioAssets().then(assets=>{
+      setBankPads(old=>{const next={...old};for(const b of Object.keys(next)){next[b]=next[b].map(p=>{const a=assets.find(x=>x.id===p.audioId);return a?{...p,url:URL.createObjectURL(a.blob),duration:a.duration,name:p.name==="PAD LIVRE"?a.name:p.name}:p;});}return next;});
+      setAudioReady(true);
+    }).catch(()=>{setAudioReady(true);setNotice("Armazenamento de áudio indisponível neste navegador.");});
   },[]);
-  useEffect(()=>{try{const safe={bank,master,dim,maxVoices,bankPads:Object.fromEntries(Object.entries(bankPads).map(([b,ps])=>[b,ps.map(({url,...p})=>p)]))};localStorage.setItem("vexora-sampler-settings",JSON.stringify(safe));}catch{setNotice("Armazenamento cheio: exporte uma cópia do projeto.");}},[bank,master,dim,maxVoices,bankPads]);
-  const stop = (key:string)=>{const a=audioRef.current[key];if(a){a.pause();a.currentTime=0;}setActive(old=>old.filter(k=>k!==key));setProgress(old=>({...old,[key]:{...old[key],current:0}}));};
+  useEffect(()=>{
+    try { const safe={bank,master,dim,maxVoices,bankPads:Object.fromEntries(Object.entries(bankPads).map(([b,ps])=>[b,ps.map(({url,...p})=>p)]))};localStorage.setItem("vexora-sampler-settings",JSON.stringify(safe)); }
+    catch { setNotice("Armazenamento cheio: exporte uma cópia do projeto."); }
+  },[bank,master,dim,maxVoices,bankPads]);
+  const stop = (key:string)=>{const a=audioRef.current[key];if(a){a.pause();a.currentTime=0;}setActive(old=>old.filter(k=>k!==key));setProgress(old=>({...old,[key]:{current:0,duration:old[key]?.duration||0}}));};
   const play = (p:Pad)=>{
     if(!p.url){setSelected(p.key);setNotice("Escolha um áudio para o pad "+p.key);fileRef.current?.click();return;}
     audioRef.current[p.key]?.pause();
@@ -79,7 +96,18 @@ export function VexoraSampler() {
     void a.play().then(()=>{setActive(old=>old.includes(p.key)?old:[...old,p.key]);setNotice("Reproduzindo: "+p.name);}).catch(()=>setNotice("Clique novamente para iniciar o áudio."));
   };
   useEffect(()=>{const fn=(e:KeyboardEvent)=>{if(e.repeat||e.ctrlKey||e.altKey||e.metaKey)return;const t=e.target as HTMLElement|null;if(t&&(["INPUT","TEXTAREA","SELECT"].includes(t.tagName)||t.isContentEditable))return;const k=e.code;const p=pads.find(x=>x.key===k);if(p){e.preventDefault();play(p);}};window.addEventListener("keydown",fn);return()=>window.removeEventListener("keydown",fn);},[pads,master,muted,maxVoices]);
-  const importAudio=(f?:File)=>{if(!f)return;if(!f.type.startsWith("audio/")&&!/\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(f.name)){setNotice("Formato de áudio não reconhecido.");return;}patch(selected,{name:f.name.replace(/\.[^.]+$/,""),url:URL.createObjectURL(f)});setNotice("Áudio carregado no pad "+selected);};
+  const importAudio=async(f?:File)=>{
+    if(!f)return;
+    if(!f.type.startsWith("audio/")&&!/\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(f.name)){setNotice("Formato de áudio não reconhecido.");return;}
+    const name=f.name.replace(/\.[^.]+$/,"");
+    const id=crypto.randomUUID();
+    let duration=0;
+    try { const el=document.createElement("audio");el.src=URL.createObjectURL(f);duration=await new Promise<number>(resolve=>{el.onloadedmetadata=()=>resolve(Number.isFinite(el.duration)?el.duration:0);el.onerror=()=>resolve(0);window.setTimeout(()=>resolve(0),3000);}); } catch {}
+    try { await saveAudioAsset({id,blob:f,name,duration}); }
+    catch { setNotice("Não foi possível salvar o áudio localmente.");return; }
+    patch(selected,{name,url:URL.createObjectURL(f),audioId:id,duration});
+    setNotice("Áudio salvo e carregado no pad "+(KEY_DEFS.find(k=>k.key===selected)?.label||selected));
+  };
   const pausePad=(key:string)=>{const a=audioRef.current[key];if(a&&!a.paused){a.pause();setActive(old=>old.filter(k=>k!==key));setNotice("Áudio pausado");}};
   const resumePad=(p:Pad)=>{const a=audioRef.current[p.key];if(a&&a.paused){a.volume=muted?0:master/100*p.volume/100;void a.play().then(()=>setActive(old=>old.includes(p.key)?old:[...old,p.key]));}else play(p);};
   useEffect(()=>{for(const p of pads){const a=audioRef.current[p.key];if(a)a.volume=muted?0:master/100*p.volume/100;}},[master,muted,pads]);
