@@ -1,0 +1,48 @@
+{
+  "name": "vexora-sampler-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows desktop shell for VEXORA SAMPLER",
+  "main": "main.cjs",
+  "scripts": {
+    "dist:win": "electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "electron": "38.2.2",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "br.com.neyzinho.vexorasampler",
+    "productName": "VEXORA SAMPLER",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "package.json",
+      ".output/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      ".output/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VEXORA SAMPLER"
+    }
+  }
+}
