@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791773828821,
+      "tag": "0000_studio_projects_media_jobs",
+      "breakpoints": true
+    }
+  ]
 }
