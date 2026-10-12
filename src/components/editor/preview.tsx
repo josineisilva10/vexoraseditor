@@ -8,7 +8,7 @@ export function Preview({ project, time, playing, onError, onMove }: { project: 
   const resources = useRef<Resources>(new Map());
   const [loading, setLoading] = useState(false);
   const latest = useRef({ project, time, playing }); latest.current = { project, time, playing };
-  const signature = project.media.map(m => `${m.id}:${m.url}`).join('|');
+  const signature = project.media.map(m => `${m.id}:${m.url}`).join('|') + project.clips.map(c => `${c.id}:${c.mediaId ?? ''}`).join('|');
   useEffect(() => {
     let active = true;
     setLoading(true);

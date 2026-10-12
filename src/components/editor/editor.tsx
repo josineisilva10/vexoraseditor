@@ -111,7 +111,10 @@ export function Editor() {
 
   function edit(transform: (p: Project) => Project) {
     if (exportProgress !== null) return;
-    setProject(previous => { setHistory(h => [...h.slice(-49), previous]); setFuture([]); return transform(previous); });
+    const previous = projectRef.current;
+    const next = transform(previous);
+    projectRef.current = next;
+    setHistory(h => [...h.slice(-49), previous]); setFuture([]); setProject(next);
   }
   const updateClip = (id: string, patch: Partial<Clip>) => edit(p => ({ ...p, clips: p.clips.map(c => c.id === id ? { ...c, ...patch, ...(patch.speed !== undefined ? { duration: c.duration * c.speed / patch.speed } : {}) } : c) }));
   function undo() { const previous = history.at(-1); if (!previous || exportProgress !== null) return; setFuture(f => [project, ...f]); setProject(previous); setHistory(h => h.slice(0, -1)); }

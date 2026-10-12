@@ -25,8 +25,9 @@ export async function inspectFile(file: File): Promise<MediaAsset> {
     if (element instanceof HTMLVideoElement) {
       element.preload = 'auto';
       await new Promise<void>(resolve => {
+        const capture = () => { clearTimeout(timer); const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 180; canvas.getContext('2d')?.drawImage(element, 0, 0, 320, 180); media.thumbnail = canvas.toDataURL('image/jpeg', .7); resolve(); };
         const timer = window.setTimeout(resolve, 5000);
-        element.addEventListener('loadeddata', () => { clearTimeout(timer); const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 180; canvas.getContext('2d')?.drawImage(element, 0, 0, 320, 180); media.thumbnail = canvas.toDataURL('image/jpeg', .7); resolve(); }, { once: true });
+        if (element.readyState >= 2) capture(); else element.addEventListener('loadeddata', capture, { once: true });
       });
     }
     if (element instanceof HTMLMediaElement) { element.removeAttribute('src'); element.load(); }

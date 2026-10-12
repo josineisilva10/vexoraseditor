@@ -3,7 +3,9 @@ import { dimensions, durationOf, validateProject, type Project, type Clip } from
 export type Resources = Map<string, HTMLImageElement | HTMLVideoElement | HTMLAudioElement>;
 export async function loadResources(project: Project): Promise<Resources> {
   const resources: Resources = new Map();
-  await Promise.all(project.media.map(async media => {
+  await Promise.all(project.clips.filter(c => c.mediaId).map(async clip => {
+    const media = project.media.find(m => m.id === clip.mediaId);
+    if (!media) throw new Error(`Mídia indisponível: ${clip.name}`);
     if (!media.url) throw new Error(`Mídia indisponível: ${media.name}`);
     const element = media.kind === 'image' ? new Image() : document.createElement(media.kind === 'video' ? 'video' : 'audio');
     element.crossOrigin = 'anonymous';
@@ -13,7 +15,7 @@ export async function loadResources(project: Project): Promise<Resources> {
       element.addEventListener('error', () => reject(new Error(`Não foi possível abrir ${media.name}. Verifique o formato e importe novamente.`)), { once: true });
       element.src = media.url;
     });
-    resources.set(media.id, element);
+    resources.set(clip.id, element);
   }));
   return resources;
 }
@@ -29,7 +31,7 @@ function gainAt(c: Clip, local: number) {
 export function syncMedia(project: Project, resources: Resources, time: number, playing: boolean, gains?: Map<string, GainNode>) {
   resources.forEach((element, id) => {
     if (!(element instanceof HTMLMediaElement)) return;
-    const clip = project.clips.find(c => c.mediaId === id && time >= c.start && time < c.start + c.duration);
+    const clip = project.clips.find(c => c.id === id && time >= c.start && time < c.start + c.duration);
     if (!clip) { element.pause(); const gain = gains?.get(id); if (gain) gain.gain.value = 0; return; }
     const local = time - clip.start;
     const target = Math.min(Math.max(0, element.duration - .01), clip.offset + local * clip.speed);
@@ -67,7 +69,7 @@ export function drawComposition(canvas: HTMLCanvasElement, project: Project, res
     } else if (c.kind === 'shape') {
       ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(0, 0, h * .12, 0, Math.PI * 2); ctx.fill();
     } else {
-      const e = c.mediaId ? resources.get(c.mediaId) : undefined;
+      const e = resources.get(c.id);
       if (e instanceof HTMLImageElement || e instanceof HTMLVideoElement) {
         const mw = e instanceof HTMLImageElement ? e.naturalWidth : e.videoWidth;
         const mh = e instanceof HTMLImageElement ? e.naturalHeight : e.videoHeight;
