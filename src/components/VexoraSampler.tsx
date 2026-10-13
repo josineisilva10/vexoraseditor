@@ -73,6 +73,7 @@ export function VexoraSampler() {
   const fileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<Record<string,HTMLAudioElement>>({});
+  useEffect(()=>()=>{Object.values(audioRef.current).forEach(audio=>{audio.pause();audio.removeAttribute("src");audio.load();});},[]);
   const chosen = pads.find(p=>p.key===selected);
   const patch = (key:string, data:Partial<Pad>)=>setPads(old=>old.map(p=>p.key===key?{...p,...data}:p));
   useEffect(()=>{
