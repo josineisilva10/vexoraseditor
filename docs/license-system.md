@@ -1,34 +1,46 @@
-# VEXORA SAMPLER — Licenciamento (fundação)
+# VEXORA SAMPLER — sistema de licenciamento
 
 ## Regras aprovadas
 
 - Teste gratuito de 5 minutos.
-- Licença paga individual, vinculada a um único computador.
-- A chave não pode registrar um segundo dispositivo por conta própria.
-- Depois da ativação inicial, o objetivo é funcionar offline.
-- Formatação/troca de máquina exige contato com o administrador para reativação ou emissão de outra chave.
+- Licença paga individual, vinculada a um único dispositivo.
+- A mesma chave não pode registrar outro dispositivo por conta própria.
+- Após a ativação inicial, a autorização assinada pode ser verificada offline.
+- Formatação/troca de máquina exige contato com o administrador para reativação ou nova chave.
 - Bancos, presets, configurações e arquivos de áudio nunca são apagados por causa do estado da licença.
 
-## Estado desta etapa
+## O que já foi implementado nesta branch
 
-Esta alteração prepara o esquema de dados do servidor. Ela **não ativa ainda** o bloqueio no aplicativo e não deve ser tratada como sistema pronto para venda. A interface atual é uma aplicação web React; o README informa que a camada desktop Windows ainda não foi concluída.
+- Tela de entrada e ativação em `src/components/ActivationGate.tsx`.
+- Contador local do teste de cinco minutos.
+- Chamada para a Edge Function `activate-license`.
+- Verificação da assinatura Ed25519 e do vínculo com o identificador de instalação.
+- Painel administrativo em `/admin/licenses`.
+- Edge Function `admin-licenses` para emitir, listar, bloquear e remover o vínculo de uma licença.
+- Migration para cadastro privado de chaves e histórico de ativações.
+- Documentação de implantação em `docs/license-deployment.md`.
 
-Uma ID criada no navegador/localStorage não comprova a identidade física de um computador: pode ser apagada ou copiada. Para cumprir a regra de um PC com resistência razoável à cópia, a versão Windows precisa de um identificador de instalação gerado e protegido pela camada nativa, além de uma autorização offline assinada digitalmente. A chave privada de assinatura deve ficar somente no servidor.
+## Limitações que precisam ficar claras
+
+O projeto atual é uma aplicação web React, não a versão desktop nativa final. O identificador salvo em `localStorage` é apenas um identificador de instalação do navegador, não uma prova física do computador. Pode ser apagado ou copiado. O teste local também pode ser reiniciado se os dados do navegador forem apagados ou o relógio do sistema for alterado.
+
+A assinatura Ed25519 impede que o cliente invente ou altere o conteúdo da autorização sem a chave privada do servidor. Porém, a camada desktop Windows ainda precisa ser implementada para proteger a identidade da instalação e verificar a autorização no código nativo. Não distribua esta versão web como mecanismo antifraude definitivo.
+
+Uma licença offline não recebe bloqueios remotos enquanto a máquina fica desconectada. Essa é uma consequência do requisito de funcionamento offline.
 
 ## Modelo de dados
 
-A migration cria:
-- `license_keys`: hash da chave (nunca a chave em texto puro), e-mail do comprador, estado, dispositivo vinculado e datas.
-- `license_activation_events`: histórico de tentativas, ativações e reativações administrativas.
+- `license_keys`: hash da chave (a chave original não é armazenada no banco), e-mail, estado, vínculo do dispositivo e datas.
+- `license_activation_events`: histórico de ativações, tentativas recusadas, bloqueios e reativações.
 
-As tabelas não permitem acesso direto via API pública. As operações deverão passar por funções de servidor com segredo administrativo, validação de entrada, limitação de tentativas e logs sem expor a chave completa.
+As tabelas têm RLS habilitado e não possuem políticas de acesso público. As operações passam pelas Edge Functions, que usam a chave de serviço apenas no backend.
 
-## Próximas etapas obrigatórias
+## Etapas necessárias antes de vender
 
-1. Configurar o segredo de assinatura no backend e publicar as funções de licenciamento.
-2. Criar painel administrativo autenticado para gerar chaves, revogar e reativar dispositivos.
-3. Adicionar a tela inicial de ativação sem alterar o layout aprovado do sampler.
-4. Integrar o fluxo com a camada desktop Windows; emitir autorização offline assinada e verificar sua assinatura no aplicativo.
-5. Testar primeira ativação online, segundo PC bloqueado, uso offline, formatação, reativação administrativa e preservação dos dados locais.
+1. Aplicar a migration e configurar os segredos conforme `docs/license-deployment.md`.
+2. Publicar as Edge Functions e testar a emissão/ativação/revogação/reativação.
+3. Implementar a camada desktop Windows e a identidade de dispositivo resistente à cópia casual.
+4. Testar segundo computador bloqueado, ativação offline, formatação, reativação e preservação dos dados locais.
+5. Adicionar rate limiting e monitoramento às tentativas de ativação e revisar a segurança do painel administrativo.
 
-Não distribuir para clientes até concluir e testar todas as etapas.
+Não considerar a ativação pronta para produção até essas etapas serem concluídas e verificadas.
