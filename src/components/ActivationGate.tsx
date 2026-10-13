@@ -1,5 +1,6 @@
+import "./activation-gate.css";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, CheckCircle2, Clock3, KeyRound, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { AudioLines, Clock3, KeyRound, ShieldCheck, Wifi, WifiOff } from "lucide-react";
 
 const TRIAL_KEY = "vexora-trial-started-at";
 const LICENSE_KEY = "vexora-offline-license";
@@ -65,7 +66,6 @@ export function ActivationGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"welcome" | "activate" | "expired">("welcome");
   const [secondsLeft, setSecondsLeft] = useState(300);
-  const [licensedEmail, setLicensedEmail] = useState("");
   const [email, setEmail] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
   const [error, setError] = useState("");
@@ -81,7 +81,6 @@ export function ActivationGate({ children }: { children: ReactNode }) {
         const payload = await verifyOfflineToken(token, deviceId);
         if (payload) {
           setHasLicense(true);
-          setLicensedEmail(payload.email);
           setReady(true);
           return;
         }
@@ -160,7 +159,6 @@ export function ActivationGate({ children }: { children: ReactNode }) {
         return;
       }
       localStorage.setItem(LICENSE_KEY, result.licenseToken);
-      setLicensedEmail(payload.email);
       setHasLicense(true);
       setTrialActive(false);
       setError("");
