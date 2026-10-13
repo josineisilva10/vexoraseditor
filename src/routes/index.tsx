@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ActivationGate } from "@/components/ActivationGate";
 import { VexoraSampler } from "@/components/VexoraSampler";
+
+function VexoraWithActivation() {
+  return (
+    <ActivationGate>
+      <VexoraSampler />
+    </ActivationGate>
+  );
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -11,5 +20,5 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
     ],
   }),
-  component: VexoraSampler,
+  component: VexoraWithActivation,
 });
